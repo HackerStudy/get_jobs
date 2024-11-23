@@ -78,6 +78,16 @@ public class BossConfig {
      */
     private List<Integer> expectedSalary;
 
+    /**
+     * 投递次数
+     */
+    private Integer deliveryTotalNum;
+
+    /**
+     * 是否使用Boss直聘的自动打招呼功能
+     */
+    private Boolean autoSayHelloed;
+
     @SneakyThrows
     public static BossConfig init() {
         BossConfig config = JobUtils.getConfig(BossConfig.class);

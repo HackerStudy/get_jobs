@@ -41,7 +41,7 @@ public class Boss {
     static Set<String> blackRecruiters;
     static Set<String> blackJobs;
     static List<Job> resultList = new ArrayList<>();
-    static List<String> deadStatus = List.of("半年前活跃");
+    static List<String> deadStatus = List.of("半年前活跃","本月活跃","1个月内活跃","2个月内活跃","3个月内活跃","4个月内活跃","5个月内活跃");
     static String dataPath = "./src/main/java/boss/data.json";
     static String cookiePath = "./src/main/java/boss/cookie.json";
     static int noJobPages;
@@ -69,8 +69,15 @@ public class Boss {
         CHROME_DRIVER.quit();
     }
 
+    /**
+     * 根据城市投递
+     * 内置分页投递
+     * @param cityCode
+     */
     private static void postJobByCity(String cityCode) {
         String searchUrl = getSearchUrl(cityCode);
+        //单次任务总投递限制数量
+        int deliveryTotalNum = Optional.ofNullable(config.getDeliveryTotalNum()).orElse(0);
         endSubmission:
         for (String keyword : config.getKeywords()) {
             page = 1;
@@ -80,6 +87,10 @@ public class Boss {
                 log.info("投递【{}】关键词第【{}】页", keyword, page);
                 String url = searchUrl + "&page=" + page;
                 int startSize = resultList.size();
+                //判断是否已经达到了投递总限制数量
+                if(deliveryTotalNum > 0 && deliveryTotalNum <= startSize) {
+                    break endSubmission;
+                }
                 Integer resultSize = resumeSubmission(url, keyword);
                 if (resultSize == -1) {
                     log.info("今日沟通人数已达上限，请明天再试");
@@ -228,6 +239,14 @@ public class Boss {
         blackJobs = jsonObject.getJSONArray("blackJobs").toList().stream().map(Object::toString).collect(Collectors.toSet());
     }
 
+    /**
+     * BOSS投递简历的核心代码
+     * @date: 2024/11/23 20:35
+     * @param url
+     * @param keyword
+     * @return: {@link Integer}
+     * @throws
+     */
     @SneakyThrows
     private static Integer resumeSubmission(String url, String keyword) {
         CHROME_DRIVER.get(url + "&query=" + keyword);
@@ -241,6 +260,7 @@ public class Boss {
         }
         List<WebElement> jobCards = CHROME_DRIVER.findElements(By.cssSelector("li.job-card-wrapper"));
         List<Job> jobs = new ArrayList<>();
+        //过滤不符合条件的岗位
         for (WebElement jobCard : jobCards) {
             WebElement infoPublic = jobCard.findElement(By.cssSelector("div.info-public"));
             String recruiterText = infoPublic.getText();
@@ -274,6 +294,10 @@ public class Boss {
             jobs.add(job);
         }
         for (Job job : jobs) {
+            //设置每次任务投递的总次数限制
+            if(resultList.size() >= config.getDeliveryTotalNum()){
+                break;
+            }
             // 打开新的标签页并打开链接
             JavascriptExecutor jse = CHROME_DRIVER;
             jse.executeScript("window.open(arguments[0], '_blank')", job.getHref());
@@ -333,10 +357,11 @@ public class Boss {
                         CHROME_DRIVER.switchTo().window(tabs.get(0));
                         continue;
                     }
-                    input.sendKeys(filterResult != null && filterResult.getResult() ? filterResult.getMessage() : config.getSayHi());
-                    WebElement send = WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[@type='send']")));
-                    send.click();
-
+                    if (!config.getAutoSayHelloed()) {
+                        input.sendKeys(filterResult != null && filterResult.getResult() ? filterResult.getMessage() : config.getSayHi());
+                        WebElement send = WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[@type='send']")));
+                        send.click();
+                    }
                     WebElement recruiterNameElement = CHROME_DRIVER.findElement(By.xpath("//p[@class='base-info fl']/span[@class='name']"));
                     WebElement recruiterTitleElement = CHROME_DRIVER.findElement(By.xpath("//p[@class='base-info fl']/span[@class='base-title']"));
                     String recruiter = recruiterNameElement.getText() + " " + recruiterTitleElement.getText();
