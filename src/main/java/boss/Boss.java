@@ -41,6 +41,7 @@ public class Boss {
     static Set<String> blackRecruiters;
     static Set<String> blackJobs;
     static List<Job> resultList = new ArrayList<>();
+    //正常的活跃状态，包括：刚刚活跃，今日活跃，3日内活跃，7日内活跃
     static List<String> deadStatus = List.of("半年前活跃","2周内活跃","3周内活跃","本月活跃","1个月内活跃","2个月内活跃","3个月内活跃","4个月内活跃","5个月内活跃");
     static String dataPath = "./src/main/java/boss/data.json";
     static String cookiePath = "./src/main/java/boss/cookie.json";
